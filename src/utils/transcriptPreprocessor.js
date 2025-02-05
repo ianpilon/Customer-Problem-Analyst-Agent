@@ -53,6 +53,22 @@ export const extractIntervieweeResponses = (transcript) => {
     }
   }
 
+  // If no patterns found, treat each chunk as an interviewee response
+  if (!metadata.interviewerPattern && !metadata.intervieweePattern) {
+    console.log('No speaker patterns found, treating chunks as responses');
+    return {
+      processedTranscript: transcript,
+      metadata: {
+        ...metadata,
+        responsesExtracted: lines.length,
+        originalLength: transcript.length,
+        processedLength: transcript.length,
+        processedLines: lines.length,
+        chunkedFormat: true
+      }
+    };
+  }
+
   // Second pass: extract responses
   for (const line of lines) {
     const trimmedLine = line.trim();
@@ -128,6 +144,17 @@ export const validatePreprocessing = (preprocessedData) => {
 
   const { processedTranscript, metadata } = preprocessedData;
 
+  // Special case for chunked format
+  if (metadata?.chunkedFormat) {
+    return !!(
+      processedTranscript &&
+      metadata &&
+      metadata.processedLines > 0 &&
+      metadata.processedLength > 0
+    );
+  }
+
+  // Regular case for speaker-based format
   return !!(
     processedTranscript &&
     metadata &&

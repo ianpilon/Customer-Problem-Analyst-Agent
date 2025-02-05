@@ -577,21 +577,18 @@ const AIAgentAnalysis = () => {
               }
             });
 
-            // Structure input data for demand analysis
-            const demandInput = {
-              ...localAnalysisResults.longContextChunking
-            };
-
+            // Get the final summary for demand analysis
+            const { finalSummary } = localAnalysisResults.longContextChunking;
+            
             console.log('🚀 DEBUG - Sending to demand analysis:', {
-              inputKeys: Object.keys(demandInput),
-              hasNeedsResults: !!demandInput.needsAnalysisResults,
-              needsResultsKeys: Object.keys(demandInput.needsAnalysisResults || {})
+              hasFinalSummary: !!finalSummary,
+              summaryLength: finalSummary?.length
             });
           
             // Attempt demand analysis
             try {
               results = await analyzeDemand(
-                demandInput,
+                { finalSummary },
                 updateProgress,
                 storedApiKey
               );

@@ -60,11 +60,11 @@ Note: When analyzing the transcript, pay attention to how many of these indicato
 
 Remember, your goal is to provide an objective, evidence-based assessment of the customer's position in the buying cycle. Never invent information or make assumptions beyond what is explicitly stated in the transcript. Your analysis should be transparent, allowing executives to understand exactly how you arrived at your conclusions.
 
-Output your analysis in the following JSON format:
+You MUST output your analysis as a valid JSON object following this EXACT format. Do not include any text before or after the JSON:
 
 {
   "demandLevel": 1 | 2 | 3,
-  "confidenceScore": number, // 0-100
+  "confidenceScore": 0-100,
   "analysis": {
     "level1Indicators": [
       {
@@ -73,8 +73,20 @@ Output your analysis in the following JSON format:
         "significance": "string"
       }
     ],
-    "level2Indicators": [...],
-    "level3Indicators": [...]
+    "level2Indicators": [
+      {
+        "quote": "string",
+        "context": "string",
+        "significance": "string"
+      }
+    ],
+    "level3Indicators": [
+      {
+        "quote": "string",
+        "context": "string",
+        "significance": "string"
+      }
+    ]
   },
   "reasoning": {
     "summary": "string",
@@ -87,8 +99,7 @@ Output your analysis in the following JSON format:
   },
   "metadata": {
     "transcriptQuality": "high" | "medium" | "low",
-    "analysisTimestamp": "string",
-    "notableObservations": ["string"]
+    "analysisTimestamp": "string"
   }
 }`;
 

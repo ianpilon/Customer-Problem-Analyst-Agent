@@ -606,9 +606,8 @@ const AIAgentAnalysis = () => {
                   stack: error.stack
                 },
                 inputStructure: {
-                  hasChunking: !!demandInput.finalSummary,
-                  hasNeeds: !!demandInput.needsAnalysisResults,
-                  needsStructure: demandInput.needsAnalysisResults
+                  hasChunking: !!chunkingResults.finalSummary,
+                  summaryLength: chunkingResults.finalSummary?.length
                 }
               });
               

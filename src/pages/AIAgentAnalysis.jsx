@@ -489,11 +489,7 @@ const AIAgentAnalysis = () => {
             );
           } catch (error) {
             console.error('Pain Analysis failed:', error);
-            toast({
-              title: "Pain Analysis Error",
-              description: error.message,
-              variant: "destructive"
-            });
+            toast.error(error.message || "Pain Analysis failed");
             setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
             throw error;
           }
@@ -785,10 +781,7 @@ const AIAgentAnalysis = () => {
       setShowResult('longContextChunking');
       setHasAnalyzed(true);
 
-      toast({
-        title: "Analysis Complete",
-        description: "Long Context Chunking analysis completed successfully.",
-      });
+      toast.success("Long Context Chunking analysis completed successfully");
     } catch (error) {
       console.error('Analysis error:', error);
       

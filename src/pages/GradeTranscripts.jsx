@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import FileUploadSection from '../components/FileUploadSection';
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import analyzeInterview from '../utils/interviewAnalysis';
 
 const GradeTranscripts = () => {
@@ -14,7 +14,7 @@ const GradeTranscripts = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showResult, setShowResult] = useState(false);
-  const { toast } = useToast();
+
 
   const handleFileUpload = (event) => {
     const uploadedFile = event.target.files[0];
@@ -29,11 +29,7 @@ const GradeTranscripts = () => {
 
   const handleAnalyze = async () => {
     if (!transcript) {
-      toast({
-        title: "Analysis Error",
-        description: "Please provide a transcript to analyze.",
-        variant: "destructive",
-      });
+      toast.error("Please provide a transcript to analyze.");
       return;
     }
 
@@ -43,11 +39,7 @@ const GradeTranscripts = () => {
       setAnalysisResult(result);
       setShowResult(true);
     } catch (error) {
-      toast({
-        title: "Analysis Error",
-        description: "An error occurred during analysis. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("An error occurred during analysis. Please try again.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -55,10 +47,7 @@ const GradeTranscripts = () => {
 
   const handleStopAnalysis = () => {
     setIsAnalyzing(false);
-    toast({
-      title: "Analysis Stopped",
-      description: "The analysis has been stopped.",
-    });
+    toast.info("Analysis has been stopped.");
   };
 
   return (

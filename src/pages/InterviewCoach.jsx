@@ -6,14 +6,14 @@ import { ArrowRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { coachingModules } from './interviewCoachData';
 import CustomScriptDialog from './CustomScriptDialog';
 
 const InterviewCoach = () => {
   const [openDialog, setOpenDialog] = useState(null);
   const [customScriptOpen, setCustomScriptOpen] = useState(false);
-  const { toast } = useToast();
+
   const navigate = useNavigate();
 
   const saveCustomScript = (customScript) => {
@@ -21,10 +21,7 @@ const InterviewCoach = () => {
     savedScripts.push(customScript);
     localStorage.setItem('customScripts', JSON.stringify(savedScripts));
     setCustomScriptOpen(false);
-    toast({
-      title: "Custom Script Saved",
-      description: "Your custom script has been saved successfully.",
-    });
+    toast.success("Custom script saved successfully");
     navigate('/problem-solution-fit-script');
   };
 

@@ -1,7 +1,7 @@
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 export const analyzeAgent = async (apiKey, transcript, agentId) => {
-  const { toast } = useToast();
+
 
   try {
     // Simulating API call with a delay
@@ -28,11 +28,7 @@ export const analyzeAgent = async (apiKey, transcript, agentId) => {
     return result;
   } catch (error) {
     console.error(`Error in agent ${agentId} analysis:`, error);
-    toast({
-      title: "Analysis Error",
-      description: `Error in agent ${agentId} analysis: ${error.message}`,
-      variant: "destructive",
-    });
+    toast.error(`Error in agent ${agentId} analysis: ${error.message}`);
     throw error; // Re-throw the error to be handled in the component
   }
 };

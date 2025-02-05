@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { agents } from '../data/agents';
 import TranscriptInput from '../components/TranscriptInput';
 import AgentSelection from '../components/AgentSelection';
@@ -36,7 +36,7 @@ const AIAgentAnalysis = () => {
   const [agentProgress, setAgentProgress] = useLocalStorage('agentProgress', {});
   const [showResult, setShowResult] = useState(null);
   const [apiKey] = useLocalStorage('llmApiKey', '');
-  const { toast } = useToast();
+  // Using sonner toast directly
   const agentListRef = useRef(null);
   const localResultsRef = useRef(localAnalysisResults);
   const [currentAgent, setCurrentAgent] = useState(null);
@@ -125,19 +125,12 @@ const AIAgentAnalysis = () => {
       if (diarizedTranscript) {
         setTranscript(diarizedTranscript);
         setAgentProgress(prev => ({ ...prev, speakerDiarization: 100 }));
-        toast({
-          title: "Audio Processing Complete",
-          description: "Your audio file has been transcribed successfully.",
-        });
+        toast.success("Audio file transcribed successfully");
       }
     } catch (error) {
       console.error('Error processing audio:', error);
       setAgentProgress(prev => ({ ...prev, speakerDiarization: 0 }));
-      toast({
-        title: "Audio Processing Error",
-        description: error.message || "An error occurred while processing the audio file.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "Error processing audio file");
       setFile(null);
     } finally {
       setAnalyzingAgents(prev => {
@@ -160,11 +153,7 @@ const AIAgentAnalysis = () => {
     setHasAnalyzed(false);
 
     if (uploadedFile.size > MAX_FILE_SIZE) {
-      toast({
-        title: "File Too Large",
-        description: `Please upload a file smaller than ${MAX_FILE_SIZE / (1024 * 1024)}MB`,
-        variant: "destructive",
-      });
+      toast.error(`Please upload a file smaller than ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
       return;
     }
 
@@ -173,11 +162,7 @@ const AIAgentAnalysis = () => {
     const isTextFile = SUPPORTED_TEXT_FORMATS.includes(fileExtension);
 
     if (!isAudioFile && !isTextFile) {
-      toast({
-        title: "Unsupported File Format",
-        description: `Please upload a supported file format: ${[...SUPPORTED_AUDIO_FORMATS, ...SUPPORTED_TEXT_FORMATS].join(', ')}`,
-        variant: "destructive",
-      });
+      toast.error(`Please upload a supported file format: ${[...SUPPORTED_AUDIO_FORMATS, ...SUPPORTED_TEXT_FORMATS].join(', ')}`);
       return;
     }
 
@@ -197,11 +182,7 @@ const AIAgentAnalysis = () => {
       }
     } catch (error) {
       console.error('Error handling file upload:', error);
-      toast({
-        title: "Upload Error",
-        description: error.message || "An error occurred while processing the file.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "An error occurred while processing the file.");
       setFile(null);
     }
   }, []);
@@ -266,18 +247,11 @@ const AIAgentAnalysis = () => {
       });
       
       // Show success toast
-      toast({
-        title: "Analysis Complete",
-        description: `${agents.find(a => a.id === agentId)?.name} has finished processing.`,
-      });
+      toast.success(`${agents.find(a => a.id === agentId)?.name} has finished processing`);
       
     } catch (error) {
       console.error('Failed to update state:', error);
-      toast({
-        title: "State Update Error",
-        description: "Failed to save analysis results. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save analysis results. Please try again.");
       
       // Reset progress on error
       const newProgress = { ...agentProgress };
@@ -367,22 +341,14 @@ const AIAgentAnalysis = () => {
     
     if (!transcript?.trim()) {
       console.warn('No transcript available');
-      toast({
-        title: "No Data Available",
-        description: "Please provide a transcript to analyze",
-        variant: "destructive"
-      });
+      toast.error("Please provide a transcript to analyze");
       return;
     }
 
     const storedApiKey = localStorage.getItem('llmApiKey');
     if (!storedApiKey) {
       console.warn('No API key available');
-      toast({
-        title: "API Key Required",
-        description: "Please set your OpenAI API key in the settings page.",
-        variant: "destructive",
-      });
+      toast.error("Please set your OpenAI API key in Settings");
       return;
     }
 
@@ -491,11 +457,7 @@ const AIAgentAnalysis = () => {
             );
           } catch (error) {
             console.error('JTBD Gains Analysis failed:', error);
-            toast({
-              title: "JTBD Gains Analysis Error",
-              description: error.message,
-              variant: "destructive"
-            });
+            toast.error(error.message || "Error in JTBD Gains Analysis");
             setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
             throw error;
           }
@@ -573,11 +535,7 @@ const AIAgentAnalysis = () => {
             );
           } catch (error) {
             console.error('Needs Analysis failed:', error);
-            toast({
-              title: "Needs Analysis Error",
-              description: error.message,
-              variant: "destructive"
-            });
+            toast.error(error.message || "Needs Analysis failed");
             // Reset progress on error
             setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
             throw error;
@@ -661,11 +619,7 @@ const AIAgentAnalysis = () => {
                 }
               });
               
-              toast({
-                title: "Demand Analysis Error",
-                description: `Error: ${error.message}. Please try running the analysis again.`,
-                variant: "destructive"
-              });
+              toast.error(`${error.message}. Please try running the analysis again.`);
               
               setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
               throw error;
@@ -683,11 +637,7 @@ const AIAgentAnalysis = () => {
               }
             });
             
-            toast({
-              title: "Demand Analysis Error",
-              description: error.message,
-              variant: "destructive"
-            });
+            toast.error(error.message);
             setAgentProgress(prev => ({ ...prev, [agentId]: 0 }));
             throw error;
           }
@@ -749,11 +699,7 @@ const AIAgentAnalysis = () => {
         errorMessage = error.message || "Failed to run analysis";
       }
       
-      toast({
-        title: "Analysis Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      toast.error(errorMessage);
     }
   }, [transcript, apiKey, analyzingAgents, localAnalysisResults, handleAnalysisComplete]);
 
@@ -780,28 +726,17 @@ const AIAgentAnalysis = () => {
 
   const handleClearData = useCallback(() => {
     clearAllState();
-    toast({
-      title: "Data Cleared",
-      description: "All analysis data has been reset.",
-    });
+    toast.success("All analysis data has been reset.");
   }, [clearAllState, toast]);
 
   const handleAnalyze = useCallback(async () => {
     if (!transcript) {
-      toast({
-        title: "Analysis Error",
-        description: "Please enter a transcript or upload a file.",
-        variant: "destructive",
-      });
+      toast.error("Please enter a transcript or upload a file.");
       return;
     }
 
     if (!apiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Please set your OpenAI API key in the settings page.",
-        variant: "destructive",
-      });
+      toast.error("Please set your OpenAI API key in the settings page.");
       return;
     }
 
@@ -862,11 +797,7 @@ const AIAgentAnalysis = () => {
         longContextChunking: 0 
       }));
       
-      toast({
-        title: "Analysis Error",
-        description: error.message || "An error occurred during analysis. Please check the console for details.",
-        variant: "destructive",
-      });
+      toast.error(error.message || "An error occurred during analysis. Please check the console for details.");
     } finally {
       setAnalyzingAgents(new Set());
     }

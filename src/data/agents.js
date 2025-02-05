@@ -1,7 +1,7 @@
 export const agents = [
   {
     id: 'longContextChunking',
-    name: 'Long Context Chunking',
+    name: 'Transcript optimization',
     description: 'Analyzes and chunks long text content for better processing',
     icon: '📝'
   },

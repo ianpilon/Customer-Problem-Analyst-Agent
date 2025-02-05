@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
 const ApiKeyInput = ({ onApiKeySubmit, initialValue = '' }) => {
@@ -9,7 +9,7 @@ const ApiKeyInput = ({ onApiKeySubmit, initialValue = '' }) => {
   const [isActive, setIsActive] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [savedKey, setSavedKey] = useState(initialValue);
-  const { toast } = useToast();
+
 
   useEffect(() => {
     const hasKey = Boolean(initialValue.trim());
@@ -25,10 +25,7 @@ const ApiKeyInput = ({ onApiKeySubmit, initialValue = '' }) => {
       setIsActive(true);
       setIsEditing(false);
       setSavedKey(apiKey.trim());
-      toast({
-        title: "API Key Saved",
-        description: "Your LLM API key has been saved.",
-      });
+      toast.success("LLM API key saved successfully");
     }
   };
 
@@ -38,10 +35,7 @@ const ApiKeyInput = ({ onApiKeySubmit, initialValue = '' }) => {
     setApiKey('');
     setSavedKey('');
     setIsEditing(false);
-    toast({
-      title: "API Key Removed",
-      description: "Your LLM API key has been removed.",
-    });
+    toast.success("LLM API key removed successfully");
   };
 
   const handleKeyChange = (e) => {

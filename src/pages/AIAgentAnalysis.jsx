@@ -577,18 +577,18 @@ const AIAgentAnalysis = () => {
               }
             });
 
-            // Get the final summary for demand analysis
-            const { finalSummary } = localAnalysisResults.longContextChunking;
+            // Get the chunking results for demand analysis
+            const chunkingResults = localAnalysisResults.longContextChunking;
             
             console.log('🚀 DEBUG - Sending to demand analysis:', {
-              hasFinalSummary: !!finalSummary,
-              summaryLength: finalSummary?.length
+              hasFinalSummary: !!chunkingResults.finalSummary,
+              summaryLength: chunkingResults.finalSummary?.length
             });
           
             // Attempt demand analysis
             try {
               results = await analyzeDemand(
-                { finalSummary },
+                chunkingResults,
                 updateProgress,
                 storedApiKey
               );

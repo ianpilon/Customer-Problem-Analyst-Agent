@@ -95,6 +95,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## 🙏 Acknowledgments
 
-- Built with OpenAI's GPT-4 technology
+- Built with OpenAI's technology, utilizing:
+  - GPT-4 for complex analysis (Demand Analysis, JTBD Primary Goals, Needs Analysis, Final Reports)
+  - GPT-3.5-16k for efficient processing of long-form content
 - UI components from Shadcn/ui
 - Icons from Lucide React

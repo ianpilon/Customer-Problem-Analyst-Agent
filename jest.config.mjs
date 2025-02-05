@@ -1,8 +1,7 @@
-/** @type {import('jest').Config} */
 export default {
   testEnvironment: 'jest-environment-jsdom',
   transform: {
-    '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './babel.config.js' }]
+    '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './babel.config.mjs' }]
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -20,4 +19,8 @@ export default {
     '!src/vite-env.d.ts'
   ],
   moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
+  extensionsToTreatAsEsm: ['.js', '.jsx', '.mjs'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(@babel/runtime)/)'
+  ]
 };

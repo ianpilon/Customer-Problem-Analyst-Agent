@@ -74,63 +74,126 @@ export const analyzeOpportunityQualification = async (chunkingResults, progressC
     // Start progress
     progressCallback(10);
 
-    // Extract the complete transcript from chunking results
+    // Extract and validate chunking results
     if (!chunkingResults || !Array.isArray(chunkingResults.chunks)) {
       console.error('Invalid chunking results:', chunkingResults);
       throw new Error('Invalid chunking results. Expected chunks array to be present.');
     }
 
-    // Get the complete transcript from the chunks
-    const completeTranscript = chunkingResults.chunks.join('\n\n');
-    
-    if (!completeTranscript) {
-      throw new Error('No transcript content found in chunking results.');
+    // Process chunks in batches
+    const CHUNK_BATCH_SIZE = 5;
+    const chunks = chunkingResults.chunks;
+    const totalBatches = Math.ceil(chunks.length / CHUNK_BATCH_SIZE);
+    let batchResults = [];
+
+    console.log('Starting batch processing:', {
+      totalChunks: chunks.length,
+      batchSize: CHUNK_BATCH_SIZE,
+      totalBatches
+    });
+
+    for (let i = 0; i < chunks.length; i += CHUNK_BATCH_SIZE) {
+      const batchNumber = Math.floor(i / CHUNK_BATCH_SIZE) + 1;
+      const batchChunks = chunks.slice(i, i + CHUNK_BATCH_SIZE);
+      const batchTranscript = batchChunks.join('\n\n');
+
+      console.log(`Processing batch ${batchNumber}/${totalBatches}:`, {
+        batchSize: batchChunks.length,
+        transcriptLength: batchTranscript.length
+      });
+
+      // Prepare messages for this batch
+      const messages = [
+        {
+          role: 'system',
+          content: `${OPPORTUNITY_QUALIFICATION_SYSTEM_PROMPT}\n\nNOTE: You are analyzing part ${batchNumber} of ${totalBatches}. Focus on identifying qualification signals in this section, but do not make final judgments until all parts are analyzed.`
+        },
+        {
+          role: 'user',
+          content: batchTranscript
+        }
+      ];
+
+      // Request analysis for this batch
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4',
+        messages,
+        temperature: 0.7,
+        max_tokens: 2000
+      });
+
+      const batchResult = JSON.parse(response.choices[0].message.content);
+      batchResults.push(batchResult);
+
+      // Update progress based on batch completion
+      const progressPercent = 20 + Math.floor((batchNumber / totalBatches) * 60);
+      progressCallback(progressPercent);
     }
 
-    // Update progress
-    progressCallback(30);
+    console.log('All batches processed, generating final analysis');
+    progressCallback(80);
 
-    // Prepare messages for the analysis
-    const messages = [
+    // Prepare a summary of batch results
+    const batchSummary = batchResults.map((result, index) => ({
+      section: index + 1,
+      assessment: result.overallAssessment,
+      scores: {
+        problemExperience: result.scores.problemExperience.score,
+        activeSearch: result.scores.activeSearch.score,
+        problemFit: result.scores.problemFit.score
+      },
+      keyEvidence: [
+        ...result.scores.problemExperience.evidence.slice(0, 2),
+        ...result.scores.activeSearch.evidence.slice(0, 2),
+        ...result.scores.problemFit.evidence.slice(0, 2)
+      ]
+    }));
+
+    // Combine batch results with a final analysis
+    const finalMessages = [
       {
         role: 'system',
-        content: OPPORTUNITY_QUALIFICATION_SYSTEM_PROMPT
+        content: `You are analyzing the results from ${totalBatches} separate transcript sections to make a final opportunity qualification assessment. Combine the evidence and scores to provide an overall evaluation. Output your final analysis in the exact same JSON format as before.`
       },
       {
         role: 'user',
-        content: completeTranscript
+        content: `Here are the summarized analysis results from ${totalBatches} sections:\n\n${JSON.stringify(batchSummary, null, 2)}\n\nProvide a final consolidated analysis that combines all the evidence and scores from these sections. Focus on the strongest evidence and most consistent patterns across sections.`
       }
     ];
 
-    // Update progress before API call
-    progressCallback(50);
-
-    // Request analysis
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages,
+    const finalResponse = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: finalMessages,
       temperature: 0.7,
-      max_tokens: 2500
+      max_tokens: 2000
     });
 
-    // Update progress after receiving response
-    progressCallback(80);
-
-    // Parse and validate the response
-    const analysisResult = JSON.parse(response.choices[0].message.content);
+    // Parse and validate the final response
+    const finalResult = JSON.parse(finalResponse.choices[0].message.content);
 
     // Validate required fields
-    if (!analysisResult.overallAssessment || !analysisResult.scores) {
+    if (!finalResult.overallAssessment || !finalResult.scores) {
+      console.error('Invalid final result structure:', finalResult);
       throw new Error('Invalid analysis result structure');
     }
 
     // Complete progress
     progressCallback(100);
 
-    return analysisResult;
+    return finalResult;
 
   } catch (error) {
-    console.error('Error in Opportunity Qualification Analysis:', error);
+    console.error('Error in Opportunity Qualification Analysis:', {
+      error: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      },
+      state: {
+        hasChunking: !!chunkingResults,
+        chunkCount: chunkingResults?.chunks?.length
+      }
+    });
     throw error;
   }
 };

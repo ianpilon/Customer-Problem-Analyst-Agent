@@ -1,72 +1,79 @@
 import OpenAI from 'openai';
+import { encode } from 'gpt-tokenizer';
 
-export const OPPORTUNITY_QUALIFICATION_SYSTEM_PROMPT = `You are an expert Opportunity Qualification Analyst, specializing in evaluating whether an interviewee represents a qualified opportunity based on three key dimensions: Problem Experience, Active Search, and Problem Fit. Your analysis should be evidence-based and drawn solely from the transcript content.
+const OPPORTUNITY_QUALIFICATION_SYSTEM_PROMPT = `You are an expert Opportunity Qualification Analyst. Analyze the provided interview data and previous analyses to evaluate qualification based on Problem Experience, Active Search, and Problem Fit.
 
-Evaluate each dimension on a scale of 1-5 and provide a confidence score (0-100%) for each rating:
+You have access to:
+1. The complete conversation summary and section summaries
+2. Previous analyses of needs and problem awareness
 
-1. Problem Experience (1-5):
-   - Understanding of their current challenges
-   - Ability to articulate specific pain points
-   - Examples of how problems impact their work
-   - Quantifiable metrics or impacts
-   - History with the problem
+Use all available context to make a comprehensive qualification assessment.
 
-2. Active Search (1-5):
-   - Current solution exploration status
-   - Previous solution attempts
-   - Research into alternatives
-   - Timeline for finding a solution
-   - Resources allocated to search
-
-3. Problem Fit (1-5):
-   - Alignment with their priorities
-   - Authority to implement solutions
-   - Budget availability/considerations
-   - Technical/operational compatibility
-   - Organizational readiness
-
-Based on these scores, provide an overall qualification assessment:
-- Fully Qualified (12-15 points)
-- Partially Qualified (8-11 points)
-- Not Qualified (0-7 points)
-
-Output your analysis in the following JSON format:
-
+Output your analysis in JSON format:
 {
   "overallAssessment": "Fully Qualified" | "Partially Qualified" | "Not Qualified",
   "summary": "string",
   "scores": {
     "problemExperience": {
-      "score": number,
-      "confidence": number,
+      "score": number (1-5),
+      "confidence": number (0-100),
       "analysis": "string",
       "evidence": ["string"]
     },
     "activeSearch": {
-      "score": number,
-      "confidence": number,
+      "score": number (1-5),
+      "confidence": number (0-100),
       "analysis": "string",
       "evidence": ["string"]
     },
     "problemFit": {
-      "score": number,
-      "confidence": number,
+      "score": number (1-5),
+      "confidence": number (0-100),
       "analysis": "string",
       "evidence": ["string"]
     }
   },
   "recommendations": ["string"],
-  "redFlags": ["string"],
-  "limitations": ["string"]
+  "redFlags": ["string"]
 }`;
 
-export const analyzeOpportunityQualification = async (chunkingResults, progressCallback) => {
-  if (!localStorage.getItem('llmApiKey')) {
+// Helper function to count tokens in a message array
+const countTokens = (messages) => {
+  return messages.reduce((total, message) => {
+    const contentTokens = encode(message.content).length;
+    // Add 4 tokens for message metadata (role, etc)
+    return total + contentTokens + 4;
+  }, 0);
+};
+
+// Helper function to ensure messages are within token limit
+const ensureTokenLimit = (messages, limit = 6000) => {
+  const currentTokens = countTokens(messages);
+  if (currentTokens > limit) {
+    console.warn(`Token limit exceeded: ${currentTokens} tokens.`);
+    return false;
+  }
+  return true;
+};
+
+// Helper function to log token usage with structure
+const logTokenUsage = (stage, details) => {
+  const tokenInfo = {
+    stage,
+    timestamp: new Date().toISOString(),
+    ...details
+  };
+  console.log('🔍 Token Usage:', JSON.stringify(tokenInfo, null, 2));
+};
+
+export const analyzeOpportunityQualification = async (analysisResults, progressCallback) => {
+  const apiKey = localStorage.getItem('llmApiKey');
+  if (!apiKey) {
     throw new Error('OpenAI API key is required. Please set your API key first.');
   }
 
   const openai = new OpenAI({
-    apiKey: localStorage.getItem('llmApiKey'),
+    apiKey,
     dangerouslyAllowBrowser: true
   });
 
@@ -74,113 +81,116 @@ export const analyzeOpportunityQualification = async (chunkingResults, progressC
     // Start progress
     progressCallback(10);
 
-    // Extract and validate chunking results
-    if (!chunkingResults || !Array.isArray(chunkingResults.chunks)) {
-      console.error('Invalid chunking results:', chunkingResults);
-      throw new Error('Invalid chunking results. Expected chunks array to be present.');
+    // Validate input structure
+    if (!analysisResults?.longContextChunking?.finalSummary) {
+      console.error('Invalid analysis results:', analysisResults);
+      throw new Error('Invalid analysis results. Expected longContextChunking.finalSummary to be present.');
     }
 
-    // Process chunks in batches
-    const CHUNK_BATCH_SIZE = 5;
-    const chunks = chunkingResults.chunks;
-    const totalBatches = Math.ceil(chunks.length / CHUNK_BATCH_SIZE);
-    let batchResults = [];
+    // Extract required context from previous analyses
+    const { longContextChunking, needsAnalysis, problemAwareness } = analysisResults;
 
-    console.log('Starting batch processing:', {
-      totalChunks: chunks.length,
-      batchSize: CHUNK_BATCH_SIZE,
-      totalBatches
+    // Log initial analysis context
+    logTokenUsage('initialization', {
+      finalSummaryTokens: encode(longContextChunking.finalSummary).length,
+      sectionSummariesCount: longContextChunking.sectionSummaries?.length || 0,
+      hasNeedsAnalysis: !!needsAnalysis,
+      hasProblemAwareness: !!problemAwareness
     });
 
-    for (let i = 0; i < chunks.length; i += CHUNK_BATCH_SIZE) {
-      const batchNumber = Math.floor(i / CHUNK_BATCH_SIZE) + 1;
-      const batchChunks = chunks.slice(i, i + CHUNK_BATCH_SIZE);
-      const batchTranscript = batchChunks.join('\n\n');
-
-      console.log(`Processing batch ${batchNumber}/${totalBatches}:`, {
-        batchSize: batchChunks.length,
-        transcriptLength: batchTranscript.length
-      });
-
-      // Prepare messages for this batch
-      const messages = [
-        {
-          role: 'system',
-          content: `${OPPORTUNITY_QUALIFICATION_SYSTEM_PROMPT}\n\nNOTE: You are analyzing part ${batchNumber} of ${totalBatches}. Focus on identifying qualification signals in this section, but do not make final judgments until all parts are analyzed.`
-        },
-        {
-          role: 'user',
-          content: batchTranscript
-        }
-      ];
-
-      // Request analysis for this batch
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages,
-        temperature: 0.7,
-        max_tokens: 2000
-      });
-
-      const batchResult = JSON.parse(response.choices[0].message.content);
-      batchResults.push(batchResult);
-
-      // Update progress based on batch completion
-      const progressPercent = 20 + Math.floor((batchNumber / totalBatches) * 60);
-      progressCallback(progressPercent);
-    }
-
-    console.log('All batches processed, generating final analysis');
-    progressCallback(80);
-
-    // Prepare a summary of batch results
-    const batchSummary = batchResults.map((result, index) => ({
-      section: index + 1,
-      assessment: result.overallAssessment,
-      scores: {
-        problemExperience: result.scores.problemExperience.score,
-        activeSearch: result.scores.activeSearch.score,
-        problemFit: result.scores.problemFit.score
+    // Prepare the analysis input using hierarchical context
+    const analysisInput = {
+      conversationContext: {
+        finalSummary: longContextChunking.finalSummary,
+        sectionSummaries: longContextChunking.sectionSummaries || [],
       },
-      keyEvidence: [
-        ...result.scores.problemExperience.evidence.slice(0, 2),
-        ...result.scores.activeSearch.evidence.slice(0, 2),
-        ...result.scores.problemFit.evidence.slice(0, 2)
-      ]
-    }));
+      previousAnalyses: {
+        needs: needsAnalysis ? {
+          immediateNeeds: needsAnalysis.immediateNeeds,
+          latentNeeds: needsAnalysis.latentNeeds,
+          summary: needsAnalysis.summary
+        } : null,
+        problemAwareness: problemAwareness ? {
+          level: problemAwareness.awarenessLevel,
+          analysis: problemAwareness.analysis,
+          evidence: problemAwareness.evidence
+        } : null
+      }
+    };
 
-    // Combine batch results with a final analysis
-    const finalMessages = [
+    progressCallback(30);
+
+    // Prepare messages for qualification analysis
+    const messages = [
       {
         role: 'system',
-        content: `You are analyzing the results from ${totalBatches} separate transcript sections to make a final opportunity qualification assessment. Combine the evidence and scores to provide an overall evaluation. Output your final analysis in the exact same JSON format as before.`
+        content: OPPORTUNITY_QUALIFICATION_SYSTEM_PROMPT
       },
       {
         role: 'user',
-        content: `Here are the summarized analysis results from ${totalBatches} sections:\n\n${JSON.stringify(batchSummary, null, 2)}\n\nProvide a final consolidated analysis that combines all the evidence and scores from these sections. Focus on the strongest evidence and most consistent patterns across sections.`
+        content: JSON.stringify(analysisInput, null, 2)
       }
     ];
 
-    const finalResponse = await openai.chat.completions.create({
+    // Verify token count before making the API call
+    const messageTokens = countTokens(messages);
+    logTokenUsage('api-request', {
+      totalTokens: messageTokens,
+      systemPromptTokens: encode(messages[0].content).length,
+      userMessageTokens: encode(messages[1].content).length
+    });
+
+    if (!ensureTokenLimit(messages)) {
+      throw new Error('Token limit exceeded. The analysis context is too large.');
+    }
+
+    progressCallback(50);
+
+    // Make the qualification analysis request
+    const response = await openai.chat.completions.create({
       model: 'gpt-4-turbo-preview',
-      messages: finalMessages,
+      messages,
       temperature: 0.7,
       max_tokens: 2000
     });
 
-    // Parse and validate the final response
-    const finalResult = JSON.parse(finalResponse.choices[0].message.content);
+    // Clean up the response content to handle potential markdown formatting
+    let content = response.choices[0].message.content;
+    
+    // Remove markdown code block markers if present
+    content = content.replace(/^```json\s*/g, '').replace(/\s*```$/g, '');
+    
+    // Remove any leading/trailing whitespace
+    content = content.trim();
+    
+    console.log('Cleaned response content:', content);
+    
+    try {
+      const result = JSON.parse(content);
+      return result;
+    } catch (parseError) {
+      console.error('JSON Parse Error:', {
+        originalContent: response.choices[0].message.content,
+        cleanedContent: content,
+        error: parseError
+      });
+      throw new Error('Failed to parse agent response: ' + parseError.message);
+    }
 
-    // Validate required fields
-    if (!finalResult.overallAssessment || !finalResult.scores) {
-      console.error('Invalid final result structure:', finalResult);
+    logTokenUsage('analysis-complete', {
+      inputTokens: encode(JSON.stringify(analysisInput)).length,
+      responseTokens: encode(response.choices[0].message.content).length,
+      totalTokens: countTokens(messages)
+    });
+
+    progressCallback(90);
+
+    // Validate the result
+    if (!result.overallAssessment || !result.scores) {
       throw new Error('Invalid analysis result structure');
     }
 
-    // Complete progress
     progressCallback(100);
-
-    return finalResult;
 
   } catch (error) {
     console.error('Error in Opportunity Qualification Analysis:', {
@@ -190,8 +200,10 @@ export const analyzeOpportunityQualification = async (chunkingResults, progressC
         stack: error.stack
       },
       state: {
-        hasChunking: !!chunkingResults,
-        chunkCount: chunkingResults?.chunks?.length
+        hasAnalysisResults: !!analysisResults,
+        hasLongContextChunking: !!analysisResults?.longContextChunking,
+        hasNeedsAnalysis: !!analysisResults?.needsAnalysis,
+        hasProblemAwareness: !!analysisResults?.problemAwareness
       }
     });
     throw error;

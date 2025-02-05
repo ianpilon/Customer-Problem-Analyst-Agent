@@ -640,9 +640,8 @@ const AIAgentAnalysis = () => {
             throw new Error('Long Context Chunking results required');
           }
           results = await analyzeOpportunityQualification(
-            localAnalysisResults.longContextChunking,
-            updateProgress,
-            storedApiKey
+            localAnalysisResults,
+            updateProgress
           );
           break;
 

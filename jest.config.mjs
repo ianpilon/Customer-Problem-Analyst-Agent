@@ -19,7 +19,7 @@ export default {
     '!src/vite-env.d.ts'
   ],
   moduleFileExtensions: ['js', 'jsx', 'json', 'node'],
-  extensionsToTreatAsEsm: ['.js', '.jsx', '.mjs'],
+  extensionsToTreatAsEsm: ['.jsx', '.mjs'],
   transformIgnorePatterns: [
     'node_modules/(?!(@babel/runtime)/)'
   ]

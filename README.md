@@ -54,15 +54,12 @@ cd Customer-Problem-Analyst-Agent
 npm install
 ```
 
-3. Create a `.env` file in the root directory and add your OpenAI API key:
-```env
-OPENAI_API_KEY=your_api_key_here
-```
-
-4. Start the development server:
+3. Start the development server:
 ```bash
 npm run dev
 ```
+
+4. Once the app is running, go to the Settings page to enter your OpenAI API key. The app handles API key management through the UI and securely stores it in your browser's localStorage.
 
 ## 💡 Usage
 
@@ -81,9 +78,10 @@ npm run dev
 
 ## 🔒 Security
 
-- API keys are stored securely in localStorage
-- Rate limiting prevents API abuse
-- Caching reduces API calls and improves performance
+- OpenAI API keys are managed through the UI's Settings page and stored in your browser's localStorage
+- Built-in rate limiting system prevents API abuse and manages costs
+- Intelligent caching system reduces API calls and improves performance
+- No server-side storage of API keys - everything is managed client-side
 
 ## 🤝 Contributing
 

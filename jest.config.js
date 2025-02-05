@@ -1,7 +1,8 @@
-export default {
+/** @type {import('jest').Config} */
+module.exports = {
   testEnvironment: 'jest-environment-jsdom',
   transform: {
-    '^.+\\.(js|jsx)$': 'babel-jest',
+    '^.+\\.(js|jsx)$': ['babel-jest', { configFile: './babel.config.js' }]
   },
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
